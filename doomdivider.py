@@ -1,3 +1,11 @@
+import asyncio
+import sys
+if sys.version_info >= (3, 14):
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+      
 from io import BytesIO
 import requests
 from PIL import Image
@@ -470,3 +478,4 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run_task(host='0.0.0.0', port=8080))
     loop.run_forever()
+
