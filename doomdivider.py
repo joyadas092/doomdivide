@@ -1,0 +1,491 @@
+import tempfile
+from io import BytesIO
+
+import requests
+from PIL import Image, ImageDraw, ImageFont
+import json
+# from playwright.async_api import async_playwright
+from pyrogram import Client, filters, enums
+from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
+import logging
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+import re
+import asyncio
+from quart import Quart
+from unshortenit import UnshortenIt
+# from playwright.sync_api import sync_playwright
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+api_id = int(os.getenv("API_ID"))
+api_hash = os.getenv("API_HASH")
+bot_token = os.getenv("BOT_TOKEN")
+apitoken=os.getenv('EARNKARO_API_TOKEN')
+app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+
+# Define a handler for the /start command
+bot = Quart(__name__)
+# bot.config['PROVIDE_AUTOMATIC_OPTIONS'] = True
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+source_channel_id = [-1003732799409]  # Replace with the source channel ID
+flipkart_id = -1003737168361
+meesho_id = -1003738621943
+ajiomyntra_id = -1003750204160
+
+private_channel=[-1003737168361]
+
+
+zepto_keywords=['jiomart','Amazon Fresh','blinkit','zepto','swiggy','bigbasket','Instamart','Flipkart minutes','instamart','Blinkit',
+                'Zepto','Swiggy','flipkart minutes','minutes loot','ONDC','Zomato','Blinkit','amazon now','grocery','Grocery']
+amazon_keywords = ['amzn', 'amazon', 'tinyurl','amazn']
+flipkart_keywords = ['fkrt', 'flipkart', 'boat', 'croma', 'tatacliq', 'fktr', 'Boat', 'Tatacliq', 'noise', 'firebolt']
+meesho_keywords = ['meesho', 'shopsy', 'msho', 'wishlink','lehlah']
+ajio_keywords = ['ajiio', 'myntr', 'xyxx', 'ajio', 'myntra', 'mamaearth', 'bombayshavingcompany', 'beardo', 'Beardo',
+                 'Tresemme', 'themancompany', 'wow', 'nykaa',
+                 'mCaffeine', 'mcaffeine', 'Bombay Shaving Company', 'BSC', 'TMC', 'foxtale',
+                 'fitspire', 'PUER', 'foxtaleskin', 'fitspire', 'pueronline', 'plumgoodness', 'myglamm',
+                 'himalayawellness', 'biotique', 'foreo', 'vega', 'maybelline', 'lorealparis',
+                 'lakmeindia', 'clinique', 'thebodyshop', 'sephora', 'naturesbasket', 'healthandglow',
+                 'colorbarcosmetics', 'sugarcosmetics', 'kamaayurveda', 'forestessentialsindia', 'derma', 'clovia',
+                 'zandu', 'renee', 'bellavita']
+# cc_keywords=['axis','hdfc','icici','sbm','sbi','credit','idfc','aubank','hsbc','Axis','Hdfc','Icici','Sbm','Sbi','Credit','Idfc','Aubank','Hsbc',
+#             'AXIS','HDFC','ICICI','SBM','SBI','CREDIT','IDFC','AUBANK','HSBC']
+# cc_keywords = ['Apply Now', 'Lifetime Free', 'Apply for', ' Lifetime free', 'Benifits', 'Apply here', 'Lifetime FREE',
+#                'ELIGIBILITY', 'Myzone', 'Rupay', 'rupay', 'Complimentary', 'Apply from here', 'annual fee',
+#                'Annual fee', 'joining fee']
+
+shortnerfound = ['extp', 'bitli', 'bit.ly', 'bitly', 'bitili', 'biti','bittli','cutt.ly','wishlink']
+
+# tuple(amazon_keywords): amazon_id,
+keyword_to_chat_id = {
+    tuple(zepto_keywords,):meesho_id,
+    tuple(meesho_keywords): meesho_id,
+    tuple(amazon_keywords): flipkart_id,
+    tuple(flipkart_keywords): flipkart_id,
+    tuple(ajio_keywords): ajiomyntra_id,
+}
+
+# =========================
+# 📌 Silent Control
+# =========================
+silent_interval = 2   # Default: notify every 2nd post
+post_counter = {}     # Track posts per target channel
+
+
+def extract_link_from_text(text):
+    # Regular expression pattern to match a URL
+    url_pattern = r'https?://\S+'
+    urls = re.findall(url_pattern, text)
+    return urls[0] if urls else None
+
+
+def tinycovert(text):
+    unshortened_urls = {}
+    urls = extract_link_from_text2(text)
+    for url in urls:
+        unshortened_urls[url] = tiny(url)
+    for original_url, unshortened_url in unshortened_urls.items():
+        text = text.replace(original_url, unshortened_url)
+    return text
+
+
+def tiny(long_url):
+    url = 'http://tinyurl.com/api-create.php?url='
+
+    response = requests.get(url + long_url)
+    short_url = response.text
+    return short_url
+
+
+def extract_link_from_text2(text):
+    # Regular expression pattern to match a URL
+    url_pattern = r'https?://\S+'
+    urls = re.findall(url_pattern, text)
+    return urls
+
+
+def unshorten_url2(short_url):
+    unshortener = UnshortenIt()
+    shorturi = unshortener.unshorten(short_url)
+    # print(shorturi)
+    return shorturi
+
+
+# async def unshorten_url(url):
+#     try:
+#         async with async_playwright() as p:
+#             browser = await p.chromium.launch(headless=True)
+#             page = await browser.new_page()
+#             await page.goto(url)
+#             final_url = page.url
+#             await browser.close()
+#             return final_url
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         return None
+
+
+def removedup(text):
+    urls = re.findall(r"https?://\S+", text)
+    unique_urls = []
+    seen = set()
+
+    for url in urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append(url)
+
+    # Remove duplicate URL lines
+    lines = text.split("\n")
+    cleaned_lines = []
+    seen_urls = set()
+
+    for line in lines:
+        if any(url in line for url in unique_urls):
+            # If the URL in the line is already seen, skip it
+            url_in_line = next((url for url in unique_urls if url in line), None)
+            if url_in_line and url_in_line in seen_urls:
+                continue
+            seen_urls.add(url_in_line)
+
+        cleaned_lines.append(line)
+
+    # Join cleaned lines back
+    cleaned_text = "\n".join(cleaned_lines).strip()
+
+    return cleaned_text
+
+
+def compilehyperlink(message):
+    text = message.caption if message.caption else message.text
+    inputvalue = text
+    hyperlinkurl = []
+    entities = message.caption_entities if message.caption else message.entities
+    for entity in entities:
+        # new_entities.append(entity)
+        if entity.url is not None:
+            hyperlinkurl.append(entity.url)
+    pattern = re.compile(r'Buy Now')
+
+    inputvalue = pattern.sub(lambda x: hyperlinkurl.pop(0), inputvalue).replace('Regular Price', 'MRP')
+    if "😱 Deal Time" in inputvalue:
+        # Remove the part
+        inputvalue = removedup(inputvalue)
+        inputvalue = (inputvalue.split("😱 Deal Time")[0]).strip()
+    return inputvalue
+def make_16_9_with_padding(file_bytes, target_width=1280, target_height=720):
+    file_bytes.seek(0)
+    img = Image.open(file_bytes).convert("RGB")
+
+    original_width, original_height = img.size
+
+    # Calculate scale while preserving aspect ratio
+    scale = min(target_width / original_width, target_height / original_height)
+    new_width = int(original_width * scale)
+    new_height = int(original_height * scale)
+
+    resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+
+    # Create white background
+    background = Image.new("RGB", (target_width, target_height), (255, 255, 255))
+
+    # Center image
+    paste_x = (target_width - new_width) // 2
+    paste_y = (target_height - new_height) // 2
+
+    background.paste(resized_img, (paste_x, paste_y))
+
+    output = BytesIO()
+    background.save(output, format="JPEG", quality=95)
+    output.seek(0)
+
+    return output
+def should_notify(chat_id: int) -> bool:
+    """Return True if this post should notify, False if silent."""
+    global post_counter, silent_interval
+    if chat_id not in post_counter:
+        post_counter[chat_id] = 0
+    post_counter[chat_id] += 1
+    return post_counter[chat_id] % silent_interval == 0
+
+def should_block_message(text: str) -> bool:
+    """
+    Block if '@' is followed by ANY letter (a-z / A-Z) without a space.
+    Allow if '@' is followed ONLY by digits (price like @141).
+    """
+    if not text:
+        return False
+
+    # find all occurrences of @something
+    matches = re.findall(r"@([A-Za-z0-9_]+)", text)
+
+    for m in matches:
+        # if it starts with digits ONLY → allowed
+        if m.isdigit():
+            continue
+
+        # if it contains any alphabet → block
+        if re.search(r"[A-Za-z]", m):
+            return True
+
+    return False
+async def send(id, message,processed):
+    # https://t.me/+EUkke-EZOcMxMGE1
+    text2 = message.caption if message.caption else message.text
+    if should_block_message(text2):
+        await app.send_message(chat_id=5886397642,text='Just Blocked a Promo')
+        return
+
+    Promo = InlineKeyboardMarkup(
+        [[
+          InlineKeyboardButton("💬 Follow WhatsApp", url="https://whatsapp.com/channel/0029Va9OziWGE56p30A1de0Q")]]
+    )
+    notify = should_notify(id)   # ✅ Added line
+
+    if message.photo:
+        try:
+            modifiedtxt = compilehyperlink(message).replace('@under_99_loot_deals', '@shopsy_meesho_Deals')
+            if 'amazon' in modifiedtxt:
+                # print('amzn working')
+                await app.send_photo(chat_id=id,
+                                     # photo=message.photo.file_id,
+                                     photo=processed,
+                                     caption=f'<b>{ekconvert(modifiedtxt)}</b>' + "\n\n<b>👉 <a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
+                                     reply_markup=Promo,
+                                     disable_notification = not notify )
+            else:
+                await app.send_photo(chat_id=id,
+                                     # photo=message.photo.file_id,
+                                     photo=processed,
+                                     caption=f'<b>{modifiedtxt}</b>' + "\n\n<b><a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
+                                     reply_markup=Promo,disable_notification = not notify)
+
+        except Exception as e:
+            print(f"❌ Error in send function: {e}")
+
+
+
+    elif message.text:
+        modifiedtxt = compilehyperlink(message).replace('@under_99_loot_deals', '@shopsy_meesho_Deals')
+        if 'tinyurl' in modifiedtxt or 'amazon' in modifiedtxt:
+            await app.send_message(chat_id=id,
+                                   text=f'<b>{ekconvert(modifiedtxt)}</b>',
+                                   disable_web_page_preview=True,disable_notification = not notify)
+        else:
+            await app.send_message(chat_id=id,
+                                   text=f'<b>{modifiedtxt}</b>',
+                                   disable_web_page_preview=True,disable_notification = not notify)
+
+
+@bot.route('/')
+async def hello():
+    return 'Hello, world!'
+
+
+@app.on_message(filters.command("start") & filters.private)
+async def start(client, message):
+    await app.send_message(message.chat.id, "ahaann")
+
+@app.on_message(filters.regex("silent_") & filters.user(5886397642))
+async def set_silent_interval(client, message):
+    global silent_interval
+    try:
+        __, arg = message.text.split('_')
+        silent_interval = int(arg)
+        await message.reply_text(f"✅ Silent interval set: Every {silent_interval} post will notify.")
+    except:
+        await message.reply_text("❌ Usage: /silent_2")
+
+################forward on off#################################################################
+global forward
+forward = True
+
+
+@app.on_message(filters.command('forward') & filters.user(5886397642))
+async def forwardtochannel(app, message):
+    await message.reply(text='Forward Status', reply_markup=InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Turn ON", callback_data='forward on')],
+         [InlineKeyboardButton("Turn Off", callback_data='forward off')]])
+                        )
+
+
+forward_off = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("Turn Off", callback_data='forward off')]])
+forward_on = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("Turn ON", callback_data='forward on')]])
+
+
+@app.on_callback_query()
+async def callback_query(app, CallbackQuery):
+    global forward
+    if CallbackQuery.data == 'forward off':
+        await CallbackQuery.edit_message_text('Forward to Channel Status turned Off', reply_markup=forward_on)
+        forward = False
+    elif CallbackQuery.data == 'forward on':
+        await CallbackQuery.edit_message_text('Forward to Channel Status turned On', reply_markup=forward_off)
+        forward = True
+
+
+########################################################################################
+
+@app.on_message(filters.chat(source_channel_id))
+async def forward_message(client, message):
+    if forward == True:
+        inputvalue = ''
+        processed = None
+        if message.caption_entities:
+            for entity in message.caption_entities:
+                if entity.url is not None:
+                    inputvalue = entity.url
+            # print(hyerlinkurl)
+            if inputvalue == '':
+                text = message.caption if message.caption else message.text
+                inputvalue = text
+
+            # Nexus photo converter
+            file_bytes = await message.download(in_memory=True)
+            processed = make_16_9_with_padding(file_bytes)
+
+            try:
+                await app.edit_message_media(
+                    chat_id=message.chat.id,
+                    message_id=message.id,
+                    media=InputMediaPhoto(
+                        media=processed,
+                        caption=message.caption
+                    ),
+                    reply_markup=InlineKeyboardMarkup(
+                        [[InlineKeyboardButton(
+                            "🚨 Follow DealDoom | Saveing Hub 💰",
+                            url="https://t.me/addlist/WhyK9RPZHdU4MGNl"
+                        )]]
+                    )
+                )
+            except Exception as e:
+                print(e)
+                # await asyncio.sleep(e.value)
+                # await app.edit_message_media(...)
+
+        if message.entities:
+            for entity in message.entities:
+                if entity.url is not None:
+                    inputvalue = entity.url
+            # print(hyerlinkurl)
+            if inputvalue == '':
+                text = message.text
+                inputvalue = text
+
+        if any(keyword in inputvalue for keyword in shortnerfound):
+            # print(extract_link_from_text(inputvalue))
+            # inputvalue= unshorten_url(extract_link_from_text(inputvalue))
+            unshortened_urls = {}
+            urls = extract_link_from_text2(inputvalue)
+            for url in urls:
+                # if 'extp' in url or 'bitli' in url:
+                unshortened_urls[url] = unshorten_url2(url)
+                # else:
+                # unshortened_urls[url] = await unshorten_url(url)
+
+            for original_url, unshortened_url in unshortened_urls.items():
+                inputvalue = inputvalue.replace(original_url, unshortened_url)
+
+        for keywords, chat_id in keyword_to_chat_id.items():
+            if any(keyword in inputvalue for keyword in keywords):
+                await send(chat_id, message, processed)
+
+
+@app.on_message(filters.chat(private_channel))
+async def forward_message(client, message):
+    # print('pp', message.id)
+
+    text = message.caption or message.text or ""
+    text = text.replace('- Sent via TeleFeed', '')
+    if not text:
+        return
+
+    text2 = None  # 🔑 IMPORTANT
+
+    try:
+        if 'amazon.in' in text:
+            text2 = await asyncio.get_event_loop().run_in_executor(
+                None, ekconvert, text
+            )
+            print(f'Found a Shopsy/Amazon deal with ID {message.id}')
+
+        if text2 and 'We could not locate' not in text2:
+            text = text2
+        else:
+            print('aff url not found')
+
+        if message.photo:
+            await app.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                caption=text
+            )
+        else:
+            await app.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.id,
+                text=text,
+                disable_web_page_preview=True
+            )
+
+    except Exception as e:
+        print("Conversion failed:", repr(e))
+
+
+def ekconvert(text):
+    url = "https://ekaro-api.affiliaters.in/api/converter/public"
+
+    # inputtext = input('enter deal: ')
+    payload = json.dumps({
+        "deal": f"{text}",
+        "convert_option": "convert_only"
+    })
+    headers = {
+        'Authorization': f'Bearer {apitoken}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    # print(response.text)
+    response_dict = json.loads(response.text)
+
+    # Extract the "data" part from the dictionary
+    data_value = response_dict.get('data')
+
+    return(data_value)
+
+@bot.before_serving
+async def before_serving():
+    await app.start()
+
+
+@bot.after_serving
+async def after_serving():
+    await app.stop()
+
+
+# if __name__ == '__main__':
+
+# bot.run(port=8000)
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run_task(host='0.0.0.0', port=8080))
+    loop.run_forever()
+
+
+
+
+
+
+
+
+
+
+
