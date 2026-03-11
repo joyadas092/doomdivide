@@ -1,12 +1,8 @@
-import tempfile
 from io import BytesIO
-
 import requests
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import json
-# from playwright.async_api import async_playwright
-from pyrogram import Client, filters, enums
-from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait, UserIsBlocked, PeerIdInvalid
+from pyrogram import Client, filters
 import logging
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 import re
@@ -280,9 +276,9 @@ async def send(id, message,processed):
                                    disable_web_page_preview=True,disable_notification = not notify)
 
 
-@bot.route('/')
-async def hello():
-    return 'Hello, world!'
+@bot.route("/")
+async def home():
+    return "Bot is running"
 
 
 @app.on_message(filters.command("start") & filters.private)
@@ -470,11 +466,7 @@ async def before_serving():
 async def after_serving():
     await app.stop()
 
-
-# if __name__ == '__main__':
-
-# bot.run(port=8000)
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run_task(host='0.0.0.0', port=8000))
+    loop.create_task(bot.run_task(host='0.0.0.0', port=8080))
     loop.run_forever()
