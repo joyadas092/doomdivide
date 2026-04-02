@@ -45,7 +45,7 @@ private_channel=[-1003737168361]
 zepto_keywords=['jiomart','Amazon Fresh','blinkit','zepto','swiggy','bigbasket','Instamart','Flipkart minutes','instamart','Blinkit',
                 'Zepto','Swiggy','flipkart minutes','minutes loot','ONDC','Zomato','Blinkit','amazon now','grocery','Grocery']
 amazon_keywords = ['amzn', 'amazon', 'tinyurl','amazn']
-flipkart_keywords = ['fkrt', 'flipkart', 'boat', 'croma', 'tatacliq', 'fktr', 'Boat', 'Tatacliq', 'noise', 'firebolt']
+flipkart_keywords = ['fkrt', 'flipkart', 'boat', 'croma', 'tatacliq', 'fktr', 'Boat', 'Tatacliq', 'noise', 'firebolt','fkart']
 meesho_keywords = ['meesho', 'shopsy', 'msho', 'wishlink','lehlah']
 ajio_keywords = ['ajiio', 'myntr', 'xyxx', 'ajio', 'myntra', 'mamaearth', 'bombayshavingcompany', 'beardo', 'Beardo',
                  'Tresemme', 'themancompany', 'wow', 'nykaa',
