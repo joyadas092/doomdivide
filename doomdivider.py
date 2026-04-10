@@ -276,7 +276,7 @@ async def send(id, message,processed):
         modifiedtxt = compilehyperlink(message).replace('@under_99_loot_deals', '@shopsy_meesho_Deals')
         if 'tinyurl' in modifiedtxt or 'amazon' in modifiedtxt:
             await app.send_message(chat_id=id,
-                                   text=f'<b>{ekconvert(modifiedtxt)}</b>',
+                                   text=f'<b>{tinyconvert(modifiedtxt)}</b>',
                                    disable_web_page_preview=True,disable_notification = not notify)
         else:
             await app.send_message(chat_id=id,
