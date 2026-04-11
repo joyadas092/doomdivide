@@ -257,7 +257,7 @@ async def send(id, message,processed):
                 await app.send_photo(chat_id=id,
                                      # photo=message.photo.file_id,
                                      photo=processed,
-                                     caption=f'<b>{tinycovert(modifiedtxt)}</b>' + "\n\n<b>👉 <a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
+                                     caption=f'<b>{ekconvert(modifiedtxt)}</b>' + "\n\n<b>👉 <a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
                                      reply_markup=Promo,
                                      disable_notification = not notify )
             else:
@@ -276,7 +276,7 @@ async def send(id, message,processed):
         modifiedtxt = compilehyperlink(message).replace('@under_99_loot_deals', '@shopsy_meesho_Deals')
         if 'tinyurl' in modifiedtxt or 'amazon' in modifiedtxt:
             await app.send_message(chat_id=id,
-                                   text=f'<b>{tinyconvert(modifiedtxt)}</b>',
+                                   text=f'<b>{ekconvert(modifiedtxt)}</b>',
                                    disable_web_page_preview=True,disable_notification = not notify)
         else:
             await app.send_message(chat_id=id,
