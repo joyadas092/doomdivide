@@ -245,7 +245,7 @@ async def send(id, message,processed):
 
     Promo = InlineKeyboardMarkup(
         [[
-          InlineKeyboardButton("💬 All LootDeals", url="https://t.me/Deal_Doom/1721")]]
+          InlineKeyboardButton("🛍️ Join LootHub ", url="https://t.me/addlist/WhyK9RPZHdU4MGNl")]]
     )
     notify = should_notify(id)   # ✅ Added line
 
@@ -261,14 +261,14 @@ async def send(id, message,processed):
                 await app.send_photo(chat_id=id,
                                      # photo=message.photo.file_id,
                                      photo=processed,
-                                     caption=f'<b>{Newtext}</b>' + "\n\n<b>👉 <a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
+                                     caption=f'<b>{Newtext}</b>',
                                      reply_markup=Promo,
                                      disable_notification = not notify )
             else:
                 await app.send_photo(chat_id=id,
                                      # photo=message.photo.file_id,
                                      photo=processed,
-                                     caption=f'<b>{modifiedtxt}</b>' + "\n\n<b><a href ='https://t.me/addlist/WhyK9RPZHdU4MGNl'>For More Deals 🥳, Click & JOIN FAST🔥</a> 👈</b>",
+                                     caption=f'<b>{modifiedtxt}</b>',
                                      reply_markup=Promo,disable_notification = not notify)
 
         except Exception as e:
